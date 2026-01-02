@@ -153,8 +153,14 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
+  console.log('='.repeat(50));
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 API available at http://0.0.0.0:${PORT}/api`);
+  console.log(`🌐 CORS configured for Vercel deployments`);
+  console.log(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`🔧 FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
+  console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
+  console.log('='.repeat(50));
 });
 
 export default app;
