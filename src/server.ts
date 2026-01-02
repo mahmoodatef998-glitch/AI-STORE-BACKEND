@@ -158,12 +158,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Simple test - MUST work if /health works
-app.get('/test-simple', (_req, res) => {
-  res.json({ success: true, message: 'Simple test works' });
-});
-
-// CORS debug endpoint
+// CORS debug - RIGHT AFTER /health to ensure it works
 app.get('/cors-debug', (req, res) => {
   console.log('[CORS-DEBUG] ✅ Route handler called!');
   try {
@@ -192,6 +187,12 @@ app.get('/cors-debug', (req, res) => {
     });
   }
 });
+
+// Simple test - MUST work if /health works
+app.get('/test-simple', (_req, res) => {
+  res.json({ success: true, message: 'Simple test works' });
+});
+
 
 
 // Simple test route to verify route registration
