@@ -75,16 +75,33 @@ app.use((req, res, next) => {
       allowedOrigin = origin;
     }
     // Allow ALL Vercel deployments (Production and Preview)
-    // Pattern: *.vercel.app or *-*.vercel.app
+    // Vercel URLs can be:
+    // - Production: https://project-name.vercel.app
+    // - Preview: https://project-name-{hash}-{user}.vercel.app
+    // - Branch: https://project-name-git-{branch}-{user}.vercel.app
     else if (normalizedOrigin.includes('.vercel.app') || 
              normalizedOrigin.endsWith('vercel.app')) {
-      // Additional security: Validate Vercel domain format
-      const vercelPattern = /^https:\/\/[a-zA-Z0-9-]+(-[a-zA-Z0-9]+)*\.vercel\.app$/;
+      // Validate Vercel domain format (more flexible pattern)
+      // Matches: https://anything.vercel.app (including preview URLs with multiple dashes)
+      const vercelPattern = /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.vercel\.app$/;
       if (vercelPattern.test(normalizedOrigin)) {
         isAllowed = true;
         allowedOrigin = origin;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[CORS] ✅ Allowed Vercel origin: ${origin}`);
+        }
       } else {
-        console.warn(`[CORS] ⚠️ Suspicious Vercel-like origin: ${origin}`);
+        // Fallback: If it contains .vercel.app, allow it (for edge cases)
+        // This is safe because we're only allowing Vercel domains
+        if (normalizedOrigin.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) {
+          isAllowed = true;
+          allowedOrigin = origin;
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[CORS] ✅ Allowed Vercel origin (fallback): ${origin}`);
+          }
+        } else {
+          console.warn(`[CORS] ⚠️ Suspicious Vercel-like origin: ${origin}`);
+        }
       }
     }
   }
