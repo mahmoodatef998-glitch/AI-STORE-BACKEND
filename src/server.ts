@@ -277,8 +277,9 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/predictions', predictionsRouter);
 app.use('/api/orders', ordersRouter);
 
-// Error handling (must be last)
-// Note: notFoundHandler will catch all unmatched routes
+// CRITICAL: Error handling (must be last)
+// notFoundHandler will catch all unmatched routes
+// IMPORTANT: Make sure all routes are defined BEFORE this line
 app.use(notFoundHandler);
 app.use(errorHandler);
 
