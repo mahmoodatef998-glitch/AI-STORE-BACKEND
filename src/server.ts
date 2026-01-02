@@ -68,22 +68,25 @@ app.use((req, res, next) => {
   }
 
   if (isAllowed) {
-    // Set CORS headers manually
+    // Set CORS headers manually - MUST be set for ALL requests (including preflight)
     if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin); // Use exact origin, no trailing slash
+      res.setHeader('Access-Control-Allow-Origin', origin); // Use exact origin from request
     }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
     
-    // Handle preflight requests
+    // Handle preflight requests (OPTIONS)
     if (req.method === 'OPTIONS') {
+      console.log(`✅ CORS: Preflight request allowed for origin: ${origin}`);
       res.status(204).end();
       return;
     }
   } else if (origin) {
     // Reject the request
+    console.error(`❌ CORS: Rejecting request from origin: ${origin}`);
     res.status(403).json({ error: `Not allowed by CORS: ${origin}` });
     return;
   }
