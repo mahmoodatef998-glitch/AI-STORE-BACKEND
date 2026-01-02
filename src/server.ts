@@ -113,6 +113,45 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Database and environment check endpoint
+app.get('/health/detailed', async (_req, res) => {
+  try {
+    const { supabase } = await import('./config/supabase');
+    
+    // Test database connection
+    const { data, error } = await supabase
+      .from('equipments')
+      .select('count')
+      .limit(1);
+    
+    const envCheck = {
+      SUPABASE_URL: process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+      PORT: process.env.PORT || '3001',
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      FRONTEND_URL: process.env.FRONTEND_URL || 'not set',
+    };
+    
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: envCheck,
+      database: {
+        connected: !error,
+        error: error?.message || null,
+        testQuery: data ? '✅ Success' : '❌ Failed',
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // CORS debug endpoint - to check CORS configuration
 app.get('/cors-debug', (req, res) => {
   const origin = req.headers.origin;
