@@ -110,6 +110,33 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// CORS debug endpoint - to check CORS configuration
+app.get('/cors-debug', (req, res) => {
+  const origin = req.headers.origin;
+  res.json({
+    origin: origin || 'none',
+    normalizedOrigin: origin ? origin.replace(/\/$/, '') : null,
+    isVercel: origin ? (origin.includes('.vercel.app') || origin.endsWith('vercel.app')) : false,
+    allowedOrigins: allowedOrigins,
+    frontendUrl: process.env.FRONTEND_URL || 'not set',
+    corsHeader: res.getHeader('Access-Control-Allow-Origin') || 'not set',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// CORS debug endpoint
+app.get('/cors-debug', (req, res) => {
+  const origin = req.headers.origin;
+  res.json({
+    origin: origin || 'none',
+    normalizedOrigin: origin ? origin.replace(/\/$/, '') : null,
+    isVercel: origin ? (origin.includes('.vercel.app') || origin.endsWith('vercel.app')) : false,
+    allowedOrigins: allowedOrigins,
+    frontendUrl: process.env.FRONTEND_URL || 'not set',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API Routes
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
