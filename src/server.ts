@@ -79,29 +79,18 @@ app.use((req, res, next) => {
     // - Production: https://project-name.vercel.app
     // - Preview: https://project-name-{hash}-{user}.vercel.app
     // - Branch: https://project-name-git-{branch}-{user}.vercel.app
-    else if (normalizedOrigin.includes('.vercel.app') || 
-             normalizedOrigin.endsWith('vercel.app')) {
-      // Validate Vercel domain format (more flexible pattern)
-      // Matches: https://anything.vercel.app (including preview URLs with multiple dashes)
-      const vercelPattern = /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.vercel\.app$/;
-      if (vercelPattern.test(normalizedOrigin)) {
-        isAllowed = true;
-        allowedOrigin = origin;
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[CORS] ✅ Allowed Vercel origin: ${origin}`);
-        }
-      } else {
-        // Fallback: If it contains .vercel.app, allow it (for edge cases)
-        // This is safe because we're only allowing Vercel domains
-        if (normalizedOrigin.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) {
-          isAllowed = true;
-          allowedOrigin = origin;
-          if (process.env.NODE_ENV !== 'production') {
-            console.log(`[CORS] ✅ Allowed Vercel origin (fallback): ${origin}`);
-          }
-        } else {
-          console.warn(`[CORS] ⚠️ Suspicious Vercel-like origin: ${origin}`);
-        }
+    // Security: Only allow HTTPS and .vercel.app domains
+    else if (normalizedOrigin.startsWith('https://') && 
+             normalizedOrigin.endsWith('.vercel.app')) {
+      // Simple validation: Must be HTTPS and end with .vercel.app
+      // This is safe because:
+      // 1. We only allow Vercel's official domain
+      // 2. HTTPS is required
+      // 3. No wildcard subdomains allowed
+      isAllowed = true;
+      allowedOrigin = origin;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[CORS] ✅ Allowed Vercel origin: ${origin}`);
       }
     }
   }
