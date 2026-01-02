@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
@@ -30,8 +31,57 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// CRITICAL: CORS middleware MUST be the VERY FIRST middleware
-// This MUST be before ANY other middleware including helmet, morgan, express.json, etc.
+// CRITICAL: Use cors package for better compatibility
+// This handles preflight requests automatically and sets headers correctly
+app.use(cors({
+  origin: (origin, callback) => {
+    // Log all requests for debugging
+    console.log(`[CORS] Request from origin: ${origin || 'none'}`);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log('[CORS] ✅ Allowing request with no origin');
+      callback(null, true);
+      return;
+    }
+    
+    // Normalize origin (remove trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    // Allow localhost for development
+    if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
+      console.log(`[CORS] ✅ Allowing localhost origin: ${origin}`);
+      callback(null, true);
+      return;
+    }
+    
+    // Check explicit allowed origins
+    if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
+      console.log(`[CORS] ✅ Allowing explicit origin: ${origin}`);
+      callback(null, true);
+      return;
+    }
+    
+    // Allow all Vercel deployments (Production and Preview)
+    if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
+      console.log(`[CORS] ✅ Allowing Vercel origin: ${origin}`);
+      callback(null, true);
+      return;
+    }
+    
+    // Reject other origins
+    console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
+    console.warn(`[CORS]    Allowed origins: ${allowedOrigins.join(', ')}`);
+    callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // Cache preflight for 24 hours
+}));
+
+// Manual CORS middleware (backup - will be removed if cors package works)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
