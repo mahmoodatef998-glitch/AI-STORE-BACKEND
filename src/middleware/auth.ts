@@ -14,6 +14,13 @@ export const authenticateToken = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
+  // CRITICAL: Skip authentication for OPTIONS requests (CORS preflight)
+  // Preflight requests don't include Authorization header
+  if (req.method === 'OPTIONS') {
+    next();
+    return;
+  }
+
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN

@@ -30,57 +30,92 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// SIMPLE CORS MIDDLEWARE - Set headers directly without any package
-// This is the simplest and most reliable approach
+/**
+ * PRODUCTION-READY CORS MIDDLEWARE
+ * 
+ * This middleware MUST be the FIRST middleware in the chain.
+ * It handles:
+ * 1. Preflight OPTIONS requests (returns 204 immediately)
+ * 2. Dynamic origin matching for Vercel preview deployments
+ * 3. Exact origin header matching (required for credentials)
+ * 
+ * Security:
+ * - Only allows specific origins (localhost, production, Vercel previews)
+ * - Uses exact origin matching (not wildcard) for credentials support
+ * - Validates origin format before allowing
+ */
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
+  // Log for debugging (can be removed in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
+  }
   
-  // Check if origin should be allowed
+  // Determine if origin should be allowed
+  let isAllowed = false;
+  let allowedOrigin: string | null = null;
+  
   if (!origin) {
-    // Allow requests with no origin
-    console.log('[CORS] ✅ Allowing request with no origin');
+    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
+    isAllowed = true;
   } else {
-    const normalizedOrigin = origin.replace(/\/$/, '');
+    // Normalize origin (remove trailing slash and whitespace)
+    const normalizedOrigin = origin.trim().replace(/\/$/, '');
     
-    // Allow localhost
-    if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
-      console.log(`[CORS] ✅ Allowing localhost: ${origin}`);
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    // Allow localhost for development
+    if (normalizedOrigin.startsWith('http://localhost:') || 
+        normalizedOrigin.startsWith('http://127.0.0.1:')) {
+      isAllowed = true;
+      allowedOrigin = origin; // Use original origin to preserve port
     }
-    // Allow explicit allowed origins
+    // Allow explicit allowed origins (exact match)
     else if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
-      console.log(`[CORS] ✅ Allowing explicit origin: ${origin}`);
-      res.setHeader('Access-Control-Allow-Origin', origin);
+      isAllowed = true;
+      allowedOrigin = origin;
     }
-    // Allow ALL Vercel deployments
-    else if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
-      console.log(`[CORS] ✅ Allowing Vercel origin: ${origin}`);
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    // Allow ALL Vercel deployments (Production and Preview)
+    // Pattern: *.vercel.app or *-*.vercel.app
+    else if (normalizedOrigin.includes('.vercel.app') || 
+             normalizedOrigin.endsWith('vercel.app')) {
+      // Additional security: Validate Vercel domain format
+      const vercelPattern = /^https:\/\/[a-zA-Z0-9-]+(-[a-zA-Z0-9]+)*\.vercel\.app$/;
+      if (vercelPattern.test(normalizedOrigin)) {
+        isAllowed = true;
+        allowedOrigin = origin;
+      } else {
+        console.warn(`[CORS] ⚠️ Suspicious Vercel-like origin: ${origin}`);
+      }
     }
-    // Reject other origins
-    else {
+  }
+  
+  // Set CORS headers for allowed origins
+  if (isAllowed && allowedOrigin) {
+    // CRITICAL: Set exact origin (required for credentials)
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+    
+    // Handle preflight requests (OPTIONS) - MUST return early
+    if (req.method === 'OPTIONS') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: ${allowedOrigin}`);
+      }
+      res.status(204).end();
+      return; // CRITICAL: Don't call next() for OPTIONS
+    }
+  } else if (origin) {
+    // Reject blocked origins (but allow requests with no origin)
+    if (process.env.NODE_ENV !== 'production') {
       console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
-      next();
-      return;
     }
+    // Don't set CORS headers, browser will block
   }
   
-  // Set CORS headers for ALL allowed requests
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: ${origin}`);
-    res.status(204).end();
-    return;
-  }
-  
+  // Continue to next middleware for non-OPTIONS requests
   next();
 });
 
@@ -89,17 +124,19 @@ app.use((req, res, next) => {
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false,
+  // Disable contentSecurityPolicy that might interfere
+  contentSecurityPolicy: false,
 }));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Health check endpoints (no auth required)
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Database and environment check endpoint
+// Database and environment check endpoint (no auth required)
 app.get('/health/detailed', async (_req, res) => {
   try {
     const { supabase } = await import('./config/supabase');
@@ -138,7 +175,7 @@ app.get('/health/detailed', async (_req, res) => {
   }
 });
 
-// CORS debug endpoint - to check CORS configuration
+// CORS debug endpoint (no auth required)
 app.get('/cors-debug', (req, res) => {
   const origin = req.headers.origin;
   res.json({
@@ -152,17 +189,18 @@ app.get('/cors-debug', (req, res) => {
   });
 });
 
-// API Routes
-// Serve uploaded files
+// API Routes (all require authentication via router-level middleware)
+// Serve uploaded files (static, no auth)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// Protected API routes
 app.use('/api/equipments', equipmentsRouter);
 app.use('/api/consumption', consumptionRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/predictions', predictionsRouter);
 app.use('/api/orders', ordersRouter);
 
-// Error handling
+// Error handling (must be last)
 app.use(notFoundHandler);
 app.use(errorHandler);
 
@@ -179,4 +217,3 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 export default app;
-
