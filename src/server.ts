@@ -186,30 +186,49 @@ app.get('/health/detailed', async (_req, res) => {
   }
 });
 
-// CORS debug endpoint (no auth required) - MUST be before API routes
+// CORS debug endpoint (no auth required)
+// IMPORTANT: This route MUST be defined BEFORE API routes to avoid being caught by notFoundHandler
 // This endpoint helps debug CORS issues by showing what origin the server receives
 app.get('/cors-debug', (req, res) => {
-  const origin = req.headers.origin;
-  const normalizedOrigin = origin ? origin.trim().replace(/\/$/, '') : null;
-  const isVercel = origin ? (normalizedOrigin?.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) : false;
-  
-  // Get the CORS header that was set by the middleware
-  const corsHeader = res.getHeader('Access-Control-Allow-Origin');
-  
-  res.json({
-    success: true,
-    origin: origin || 'none',
-    normalizedOrigin: normalizedOrigin,
-    isVercel: isVercel || false,
-    allowedOrigins: allowedOrigins,
-    frontendUrl: process.env.FRONTEND_URL || 'not set',
-    corsHeader: corsHeader || 'not set',
-    requestHeaders: {
-      origin: req.headers.origin || 'none',
-      'user-agent': req.headers['user-agent'] || 'none',
-    },
-    timestamp: new Date().toISOString(),
-  });
+  try {
+    const origin = req.headers.origin;
+    const normalizedOrigin = origin ? origin.trim().replace(/\/$/, '') : null;
+    const isVercel = origin ? (normalizedOrigin?.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) : false;
+    
+    // Get the CORS header that was set by the middleware
+    const corsHeader = res.getHeader('Access-Control-Allow-Origin');
+    
+    // Log for debugging
+    console.log('[CORS-DEBUG] Request received:', {
+      method: req.method,
+      path: req.path,
+      origin: origin || 'none',
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.json({
+      success: true,
+      message: 'CORS debug endpoint is working',
+      origin: origin || 'none',
+      normalizedOrigin: normalizedOrigin,
+      isVercel: isVercel || false,
+      allowedOrigins: allowedOrigins,
+      frontendUrl: process.env.FRONTEND_URL || 'not set',
+      corsHeader: corsHeader || 'not set',
+      requestHeaders: {
+        origin: req.headers.origin || 'none',
+        'user-agent': req.headers['user-agent'] || 'none',
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[CORS-DEBUG] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // API Routes (all require authentication via router-level middleware)
@@ -224,6 +243,7 @@ app.use('/api/predictions', predictionsRouter);
 app.use('/api/orders', ordersRouter);
 
 // Error handling (must be last)
+// Note: notFoundHandler will catch all unmatched routes
 app.use(notFoundHandler);
 app.use(errorHandler);
 
