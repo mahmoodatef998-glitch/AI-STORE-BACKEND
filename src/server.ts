@@ -143,8 +143,39 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoints (no auth required)
+// IMPORTANT: Define routes BEFORE any middleware that might interfere
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// CRITICAL: CORS debug endpoint - MUST be defined here, before /health/detailed
+app.get('/cors-debug', (req, res) => {
+  console.log('[CORS-DEBUG] ✅ Route handler called!');
+  try {
+    const origin = req.headers.origin;
+    const normalizedOrigin = origin ? origin.trim().replace(/\/$/, '') : null;
+    const isVercel = origin ? (normalizedOrigin?.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) : false;
+    const corsHeader = res.getHeader('Access-Control-Allow-Origin');
+    
+    res.json({
+      success: true,
+      message: 'CORS debug endpoint is working',
+      origin: origin || 'none',
+      normalizedOrigin: normalizedOrigin,
+      isVercel: isVercel || false,
+      allowedOrigins: allowedOrigins,
+      frontendUrl: process.env.FRONTEND_URL || 'not set',
+      corsHeader: corsHeader || 'not set',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[CORS-DEBUG] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Simple test route to verify route registration
@@ -181,55 +212,6 @@ app.get('/debug/cors', (req, res) => {
   }
 });
 
-// CORS debug endpoint - ADDED BEFORE /health/detailed to ensure it's registered
-// CRITICAL: This route MUST be registered before API routes
-app.get('/cors-debug', (req, res) => {
-  console.log('[CORS-DEBUG] ✅ Route handler called!');
-  try {
-    const origin = req.headers.origin;
-    const normalizedOrigin = origin ? origin.trim().replace(/\/$/, '') : null;
-    const isVercel = origin ? (normalizedOrigin?.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) : false;
-    
-    // Get the CORS header that was set by the middleware
-    const corsHeader = res.getHeader('Access-Control-Allow-Origin');
-    
-    // Log for debugging
-    console.log('[CORS-DEBUG] Request received:', {
-      method: req.method,
-      path: req.path,
-      url: req.url,
-      originalUrl: req.originalUrl,
-      origin: origin || 'none',
-      timestamp: new Date().toISOString(),
-    });
-    
-    res.json({
-      success: true,
-      message: 'CORS debug endpoint is working',
-      origin: origin || 'none',
-      normalizedOrigin: normalizedOrigin,
-      isVercel: isVercel || false,
-      allowedOrigins: allowedOrigins,
-      frontendUrl: process.env.FRONTEND_URL || 'not set',
-      corsHeader: corsHeader || 'not set',
-      requestHeaders: {
-        origin: req.headers.origin || 'none',
-        'user-agent': req.headers['user-agent'] || 'none',
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('[CORS-DEBUG] Error:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-// Log that route is being registered
-console.log('✅ Registering /cors-debug route');
 
 // Database and environment check endpoint (no auth required)
 app.get('/health/detailed', async (_req, res) => {
