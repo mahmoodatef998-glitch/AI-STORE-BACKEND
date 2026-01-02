@@ -181,9 +181,19 @@ app.get('/health/detailed', async (_req, res) => {
   }
 });
 
-// CORS debug endpoint (no auth required)
+// CORS debug endpoint (no auth required) - MUST be before API routes
 app.get('/cors-debug', (req, res) => {
   const origin = req.headers.origin;
+  
+  // Set CORS headers manually for this endpoint
+  if (origin) {
+    const normalizedOrigin = origin.trim().replace(/\/$/, '');
+    if (normalizedOrigin.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+  }
+  
   res.json({
     origin: origin || 'none',
     normalizedOrigin: origin ? origin.replace(/\/$/, '') : null,
@@ -192,6 +202,7 @@ app.get('/cors-debug', (req, res) => {
     frontendUrl: process.env.FRONTEND_URL || 'not set',
     corsHeader: res.getHeader('Access-Control-Allow-Origin') || 'not set',
     timestamp: new Date().toISOString(),
+    serverTime: new Date().toISOString(),
   });
 });
 
