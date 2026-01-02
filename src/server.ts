@@ -16,9 +16,6 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-// Middleware
-app.use(helmet());
-
 // CORS configuration - support both Production and Preview deployments
 const allowedOrigins = [
   'http://localhost:3000',
@@ -34,9 +31,12 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// CORS middleware with proper origin handling
+// CORS middleware - MUST be before helmet() to work correctly
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  
+  // Log all requests for debugging
+  console.log(`📥 Request: ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
   
   // Normalize origin (remove trailing slash)
   const normalizedOrigin = origin ? origin.replace(/\/$/, '') : null;
@@ -70,7 +70,9 @@ app.use((req, res, next) => {
   if (isAllowed) {
     // Set CORS headers manually - MUST be set for ALL requests (including preflight)
     if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin); // Use exact origin from request
+      // CRITICAL: Use exact origin from request header, NOT from environment variable
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      console.log(`✅ CORS: Set Access-Control-Allow-Origin to: ${origin}`);
     }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
@@ -80,7 +82,7 @@ app.use((req, res, next) => {
     
     // Handle preflight requests (OPTIONS)
     if (req.method === 'OPTIONS') {
-      console.log(`✅ CORS: Preflight request allowed for origin: ${origin}`);
+      console.log(`✅ CORS: Preflight request (OPTIONS) - returning 204 for origin: ${origin}`);
       res.status(204).end();
       return;
     }
@@ -93,6 +95,12 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Middleware - helmet() after CORS to avoid conflicts
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
