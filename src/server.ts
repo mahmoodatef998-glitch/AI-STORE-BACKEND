@@ -148,7 +148,9 @@ app.get('/health', (_req, res) => {
 });
 
 // CORS debug endpoint - ADDED BEFORE /health/detailed to ensure it's registered
+// CRITICAL: This route MUST be registered before API routes
 app.get('/cors-debug', (req, res) => {
+  console.log('[CORS-DEBUG] ✅ Route handler called!');
   try {
     const origin = req.headers.origin;
     const normalizedOrigin = origin ? origin.trim().replace(/\/$/, '') : null;
@@ -161,6 +163,8 @@ app.get('/cors-debug', (req, res) => {
     console.log('[CORS-DEBUG] Request received:', {
       method: req.method,
       path: req.path,
+      url: req.url,
+      originalUrl: req.originalUrl,
       origin: origin || 'none',
       timestamp: new Date().toISOString(),
     });
@@ -189,6 +193,9 @@ app.get('/cors-debug', (req, res) => {
     });
   }
 });
+
+// Log that route is being registered
+console.log('✅ Registering /cors-debug route');
 
 // Database and environment check endpoint (no auth required)
 app.get('/health/detailed', async (_req, res) => {
@@ -246,6 +253,17 @@ app.use('/api/orders', ordersRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Log all registered routes for debugging
+console.log('📋 Registered routes:');
+console.log('  GET /health');
+console.log('  GET /cors-debug');
+console.log('  GET /health/detailed');
+console.log('  GET /api/equipments');
+console.log('  GET /api/consumption');
+console.log('  GET /api/notifications');
+console.log('  GET /api/predictions');
+console.log('  GET /api/orders');
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
@@ -256,6 +274,15 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔧 FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
   console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
   console.log('='.repeat(50));
+  
+  // Verify route is registered
+  const routes = app._router?.stack?.filter((r: any) => r.route) || [];
+  const corsDebugRoute = routes.find((r: any) => r.route?.path === '/cors-debug');
+  if (corsDebugRoute) {
+    console.log('✅ /cors-debug route is registered');
+  } else {
+    console.error('❌ /cors-debug route is NOT registered!');
+  }
 });
 
 export default app;
