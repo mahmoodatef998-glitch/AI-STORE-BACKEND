@@ -81,79 +81,8 @@ app.use(cors({
   maxAge: 86400, // Cache preflight for 24 hours
 }));
 
-// Manual CORS middleware (backup - will be removed if cors package works)
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Log all requests for debugging (especially OPTIONS preflight)
-  console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
-  
-  // Normalize origin (remove trailing slash)
-  const normalizedOrigin = origin ? origin.replace(/\/$/, '') : null;
-
-  // Check if origin should be allowed
-  let isAllowed = false;
-  
-  if (!origin) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    isAllowed = true;
-    console.log('[CORS] ✅ Allowing request with no origin');
-  } else if (normalizedOrigin?.startsWith('http://localhost:') || normalizedOrigin?.startsWith('http://127.0.0.1:')) {
-    // Allow localhost for development
-    isAllowed = true;
-    console.log(`[CORS] ✅ Allowing localhost origin: ${origin}`);
-  } else if (normalizedOrigin && allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
-    // Check explicit allowed origins
-    isAllowed = true;
-    console.log(`[CORS] ✅ Allowing explicit origin: ${origin}`);
-  } else if (normalizedOrigin && (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app'))) {
-    // Allow all Vercel deployments (Production and Preview)
-    isAllowed = true;
-    console.log(`[CORS] ✅ Allowing Vercel origin: ${origin}`);
-  } else {
-    // Reject other origins
-    console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
-    console.warn(`[CORS]    Allowed origins: ${allowedOrigins.join(', ')}`);
-    console.warn(`[CORS]    Vercel preview URLs are also allowed`);
-  }
-
-  if (isAllowed) {
-    // CRITICAL: Set CORS headers IMMEDIATELY - BEFORE any other middleware can interfere
-    // MUST be set for ALL requests (including preflight OPTIONS)
-    if (origin) {
-      // CRITICAL: Use exact origin from request header, NOT from environment variable
-      // This is the key fix - we MUST use the origin from the request, not a hardcoded value
-      const exactOrigin = origin.trim(); // Remove any whitespace
-      res.setHeader('Access-Control-Allow-Origin', exactOrigin);
-      console.log(`[CORS] ✅ Set Access-Control-Allow-Origin to: "${exactOrigin}"`);
-      console.log(`[CORS] ✅ Origin from request: "${origin}"`);
-    }
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
-    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
-    
-    // Handle preflight requests (OPTIONS) - MUST return early
-    if (req.method === 'OPTIONS') {
-      const setOrigin = res.getHeader('Access-Control-Allow-Origin');
-      console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: "${origin}"`);
-      console.log(`[CORS] ✅ Verified header: Access-Control-Allow-Origin="${setOrigin}"`);
-      console.log(`[CORS] ✅ Headers match: ${setOrigin === origin ? 'YES' : 'NO'}`);
-      res.status(204).end();
-      return; // CRITICAL: Must return here, don't call next()
-    }
-  } else if (origin) {
-    // Reject the request
-    console.error(`[CORS] ❌ Rejecting request from origin: ${origin}`);
-    res.status(403).json({ error: `Not allowed by CORS: ${origin}` });
-    return; // CRITICAL: Must return here, don't call next()
-  }
-
-  next();
-});
-
-// Middleware - helmet() after CORS to avoid conflicts
+// IMPORTANT: All other middleware MUST come AFTER CORS middleware
+// helmet() configuration to avoid CORS conflicts
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false,
