@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
@@ -31,58 +30,59 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// CRITICAL: Use cors package with dynamic origin function
-// This MUST return the exact origin from the request, not true
-app.use(cors({
-  origin: (origin, callback) => {
-    // Log all requests for debugging
-    console.log(`[CORS] Request from origin: ${origin || 'none'}`);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('[CORS] ✅ Allowing request with no origin');
-      callback(null, true);
-      return;
-    }
-    
-    // Normalize origin (remove trailing slash)
+// SIMPLE CORS MIDDLEWARE - Set headers directly without any package
+// This is the simplest and most reliable approach
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
+  
+  // Check if origin should be allowed
+  if (!origin) {
+    // Allow requests with no origin
+    console.log('[CORS] ✅ Allowing request with no origin');
+  } else {
     const normalizedOrigin = origin.replace(/\/$/, '');
     
-    // Allow localhost for development
+    // Allow localhost
     if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
-      console.log(`[CORS] ✅ Allowing localhost origin: ${origin}`);
-      // CRITICAL: Return the exact origin, not true
-      callback(null, origin);
-      return;
+      console.log(`[CORS] ✅ Allowing localhost: ${origin}`);
+      res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    
-    // Check explicit allowed origins
-    if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
+    // Allow explicit allowed origins
+    else if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
       console.log(`[CORS] ✅ Allowing explicit origin: ${origin}`);
-      // CRITICAL: Return the exact origin, not true
-      callback(null, origin);
-      return;
+      res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    
-    // Allow all Vercel deployments (Production and Preview)
-    if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
+    // Allow ALL Vercel deployments
+    else if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
       console.log(`[CORS] ✅ Allowing Vercel origin: ${origin}`);
-      // CRITICAL: Return the exact origin, not true - this is the key fix!
-      callback(null, origin);
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    // Reject other origins
+    else {
+      console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
+      next();
       return;
     }
-    
-    // Reject other origins
-    console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
-    console.warn(`[CORS]    Allowed origins: ${allowedOrigins.join(', ')}`);
-    callback(new Error(`Not allowed by CORS: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400, // Cache preflight for 24 hours
-}));
+  }
+  
+  // Set CORS headers for ALL allowed requests
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: ${origin}`);
+    res.status(204).end();
+    return;
+  }
+  
+  next();
+});
 
 // IMPORTANT: All other middleware MUST come AFTER CORS middleware
 // helmet() configuration to avoid CORS conflicts
