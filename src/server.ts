@@ -15,6 +15,12 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
+// CRITICAL: Define routes BEFORE any middleware to ensure they work
+// This route MUST work if Express is working
+app.get('/ping', (_req, res) => {
+  res.json({ success: true, message: 'Ping works - Express is working' });
+});
+
 // CORS configuration - support both Production and Preview deployments
 const allowedOrigins = [
   'http://localhost:3000',
