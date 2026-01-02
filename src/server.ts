@@ -20,21 +20,6 @@ const PORT = Number(process.env.PORT) || 3001;
 app.use(helmet());
 
 // CORS configuration - support both Production and Preview deployments
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://ai-store-frontend.vercel.app',
-];
-
-// Add FRONTEND_URL from environment if provided
-if (process.env.FRONTEND_URL) {
-  const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ''); // Remove trailing slash
-  if (!allowedOrigins.includes(frontendUrl)) {
-    allowedOrigins.push(frontendUrl);
-  }
-}
-
-// CORS with origin validation function
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -42,22 +27,37 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Check if origin is in allowed list
-    if (allowedOrigins.some(allowed => origin === allowed)) {
+    // Normalize origin (remove trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+
+    // Allow localhost for development
+    if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
       return callback(null, true);
     }
 
-    // Allow Vercel Preview deployments (wildcard matching)
-    if (origin.includes('.vercel.app') || origin.includes('vercel.app')) {
+    // Allow all Vercel deployments (Production and Preview)
+    if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
       return callback(null, true);
+    }
+
+    // Allow FRONTEND_URL from environment if provided
+    if (process.env.FRONTEND_URL) {
+      const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
+      if (normalizedOrigin === frontendUrl) {
+        return callback(null, true);
+      }
     }
 
     // Reject other origins
-    callback(new Error('Not allowed by CORS'));
+    console.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 }));
 app.use(morgan('dev'));
 app.use(express.json());
