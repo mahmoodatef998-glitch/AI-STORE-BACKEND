@@ -48,20 +48,20 @@ app.use(cors({
     // Allow localhost for development
     if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
       console.log(`✅ CORS: Allowing localhost origin: ${origin}`);
-      return callback(null, true);
+      return callback(null, origin); // Return the actual origin, not true
     }
 
     // Check explicit allowed origins
     if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
       console.log(`✅ CORS: Allowing explicit origin: ${origin}`);
-      return callback(null, true);
+      return callback(null, origin); // Return the actual origin, not true
     }
 
     // Allow all Vercel deployments (Production and Preview)
     // Vercel preview URLs typically look like: project-name-hash.vercel.app
     if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
       console.log(`✅ CORS: Allowing Vercel origin: ${origin}`);
-      return callback(null, true);
+      return callback(null, origin); // Return the actual origin, not true
     }
 
     // Reject other origins
