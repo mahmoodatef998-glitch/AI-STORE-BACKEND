@@ -30,8 +30,8 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// CORS middleware - MUST be before helmet() to work correctly
-// This middleware MUST be the first middleware to set CORS headers
+// CRITICAL: CORS middleware MUST be the VERY FIRST middleware
+// This MUST be before ANY other middleware including helmet, morgan, express.json, etc.
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
