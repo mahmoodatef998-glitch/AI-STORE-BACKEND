@@ -68,13 +68,15 @@ app.use((req, res, next) => {
   }
 
   if (isAllowed) {
-    // CRITICAL: Set CORS headers BEFORE any other middleware can interfere
+    // CRITICAL: Set CORS headers IMMEDIATELY - BEFORE any other middleware can interfere
     // MUST be set for ALL requests (including preflight OPTIONS)
     if (origin) {
       // CRITICAL: Use exact origin from request header, NOT from environment variable
       // This is the key fix - we MUST use the origin from the request, not a hardcoded value
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      console.log(`[CORS] ✅ Set Access-Control-Allow-Origin to: "${origin}"`);
+      const exactOrigin = origin.trim(); // Remove any whitespace
+      res.setHeader('Access-Control-Allow-Origin', exactOrigin);
+      console.log(`[CORS] ✅ Set Access-Control-Allow-Origin to: "${exactOrigin}"`);
+      console.log(`[CORS] ✅ Origin from request: "${origin}"`);
     }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
@@ -84,8 +86,10 @@ app.use((req, res, next) => {
     
     // Handle preflight requests (OPTIONS) - MUST return early
     if (req.method === 'OPTIONS') {
+      const setOrigin = res.getHeader('Access-Control-Allow-Origin');
       console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: "${origin}"`);
-      console.log(`[CORS] ✅ Response headers set: Access-Control-Allow-Origin="${res.getHeader('Access-Control-Allow-Origin')}"`);
+      console.log(`[CORS] ✅ Verified header: Access-Control-Allow-Origin="${setOrigin}"`);
+      console.log(`[CORS] ✅ Headers match: ${setOrigin === origin ? 'YES' : 'NO'}`);
       res.status(204).end();
       return; // CRITICAL: Must return here, don't call next()
     }
