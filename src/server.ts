@@ -152,6 +152,11 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Simple test - MUST work if /health works
+app.get('/test-simple', (_req, res) => {
+  res.json({ success: true, message: 'Simple test works' });
+});
+
 // CORS debug endpoint
 app.get('/cors-debug', (req, res) => {
   console.log('[CORS-DEBUG] ✅ Route handler called!');
