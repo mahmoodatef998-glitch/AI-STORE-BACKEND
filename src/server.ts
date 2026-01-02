@@ -20,10 +20,25 @@ const PORT = Number(process.env.PORT) || 3001;
 app.use(helmet());
 
 // CORS configuration - support both Production and Preview deployments
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://ai-store-frontend.vercel.app', // Production Vercel URL
+];
+
+// Add FRONTEND_URL from environment if provided
+if (process.env.FRONTEND_URL) {
+  const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ''); // Remove trailing slash
+  if (!allowedOrigins.includes(frontendUrl)) {
+    allowedOrigins.push(frontendUrl);
+  }
+}
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
       return callback(null, true);
     }
 
@@ -32,24 +47,27 @@ app.use(cors({
 
     // Allow localhost for development
     if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
+      console.log(`✅ CORS: Allowing localhost origin: ${origin}`);
+      return callback(null, true);
+    }
+
+    // Check explicit allowed origins
+    if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
+      console.log(`✅ CORS: Allowing explicit origin: ${origin}`);
       return callback(null, true);
     }
 
     // Allow all Vercel deployments (Production and Preview)
+    // Vercel preview URLs typically look like: project-name-hash.vercel.app
     if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
+      console.log(`✅ CORS: Allowing Vercel origin: ${origin}`);
       return callback(null, true);
     }
 
-    // Allow FRONTEND_URL from environment if provided
-    if (process.env.FRONTEND_URL) {
-      const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
-      if (normalizedOrigin === frontendUrl) {
-        return callback(null, true);
-      }
-    }
-
     // Reject other origins
-    console.warn(`CORS blocked origin: ${origin}`);
+    console.warn(`❌ CORS: Blocked origin: ${origin}`);
+    console.warn(`   Allowed origins: ${allowedOrigins.join(', ')}`);
+    console.warn(`   Vercel preview URLs are also allowed`);
     callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
