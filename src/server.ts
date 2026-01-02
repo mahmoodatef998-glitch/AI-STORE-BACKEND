@@ -31,8 +31,8 @@ if (process.env.FRONTEND_URL) {
   }
 }
 
-// CRITICAL: Use cors package for better compatibility
-// This handles preflight requests automatically and sets headers correctly
+// CRITICAL: Use cors package with dynamic origin function
+// This MUST return the exact origin from the request, not true
 app.use(cors({
   origin: (origin, callback) => {
     // Log all requests for debugging
@@ -51,21 +51,24 @@ app.use(cors({
     // Allow localhost for development
     if (normalizedOrigin.startsWith('http://localhost:') || normalizedOrigin.startsWith('http://127.0.0.1:')) {
       console.log(`[CORS] ✅ Allowing localhost origin: ${origin}`);
-      callback(null, true);
+      // CRITICAL: Return the exact origin, not true
+      callback(null, origin);
       return;
     }
     
     // Check explicit allowed origins
     if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
       console.log(`[CORS] ✅ Allowing explicit origin: ${origin}`);
-      callback(null, true);
+      // CRITICAL: Return the exact origin, not true
+      callback(null, origin);
       return;
     }
     
     // Allow all Vercel deployments (Production and Preview)
     if (normalizedOrigin.includes('.vercel.app') || normalizedOrigin.endsWith('vercel.app')) {
       console.log(`[CORS] ✅ Allowing Vercel origin: ${origin}`);
-      callback(null, true);
+      // CRITICAL: Return the exact origin, not true - this is the key fix!
+      callback(null, origin);
       return;
     }
     
