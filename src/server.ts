@@ -147,48 +147,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Database and environment check endpoint (no auth required)
-app.get('/health/detailed', async (_req, res) => {
-  try {
-    const { supabase } = await import('./config/supabase');
-    
-    // Test database connection
-    const { data, error } = await supabase
-      .from('equipments')
-      .select('count')
-      .limit(1);
-    
-    const envCheck = {
-      SUPABASE_URL: process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing',
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing',
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-      PORT: process.env.PORT || '3001',
-      NODE_ENV: process.env.NODE_ENV || 'not set',
-      FRONTEND_URL: process.env.FRONTEND_URL || 'not set',
-    };
-    
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      environment: envCheck,
-      database: {
-        connected: !error,
-        error: error?.message || null,
-        testQuery: data ? '✅ Success' : '❌ Failed',
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-// CORS debug endpoint (no auth required)
-// IMPORTANT: This route MUST be defined BEFORE API routes to avoid being caught by notFoundHandler
-// This endpoint helps debug CORS issues by showing what origin the server receives
+// CORS debug endpoint - ADDED BEFORE /health/detailed to ensure it's registered
 app.get('/cors-debug', (req, res) => {
   try {
     const origin = req.headers.origin;
@@ -230,6 +189,46 @@ app.get('/cors-debug', (req, res) => {
     });
   }
 });
+
+// Database and environment check endpoint (no auth required)
+app.get('/health/detailed', async (_req, res) => {
+  try {
+    const { supabase } = await import('./config/supabase');
+    
+    // Test database connection
+    const { data, error } = await supabase
+      .from('equipments')
+      .select('count')
+      .limit(1);
+    
+    const envCheck = {
+      SUPABASE_URL: process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+      PORT: process.env.PORT || '3001',
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      FRONTEND_URL: process.env.FRONTEND_URL || 'not set',
+    };
+    
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: envCheck,
+      database: {
+        connected: !error,
+        error: error?.message || null,
+        testQuery: data ? '✅ Success' : '❌ Failed',
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 
 // API Routes (all require authentication via router-level middleware)
 // Serve uploaded files (static, no auth)
