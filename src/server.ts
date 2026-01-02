@@ -142,13 +142,17 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoints (no auth required)
-// IMPORTANT: Define routes BEFORE any middleware that might interfere
+// ============================================
+// PUBLIC ROUTES (NO AUTH REQUIRED)
+// ============================================
+// IMPORTANT: These routes MUST be defined BEFORE API routes
+
+// Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// CRITICAL: CORS debug endpoint - MUST be defined here, before /health/detailed
+// CORS debug endpoint
 app.get('/cors-debug', (req, res) => {
   console.log('[CORS-DEBUG] ✅ Route handler called!');
   try {
@@ -177,6 +181,7 @@ app.get('/cors-debug', (req, res) => {
     });
   }
 });
+
 
 // Simple test route to verify route registration
 app.get('/test', (_req, res) => {
