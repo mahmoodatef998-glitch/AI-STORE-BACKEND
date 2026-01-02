@@ -309,3 +309,4 @@ CREATE POLICY "Only admins can manage suppliers"
     USING (get_user_role(auth.uid()) = 'admin')
     WITH CHECK (get_user_role(auth.uid()) = 'admin');
 
+

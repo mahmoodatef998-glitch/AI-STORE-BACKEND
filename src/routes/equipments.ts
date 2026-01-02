@@ -35,3 +35,4 @@ router.delete('/:id', requireAdmin, deleteEquipment);
 
 export default router;
 
+

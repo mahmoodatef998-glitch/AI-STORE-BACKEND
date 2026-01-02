@@ -65,3 +65,4 @@ router.get('/:equipment_id', async (
 
 export default router;
 
+

@@ -102,3 +102,4 @@ NEXT_PUBLIC_API_URL=https://ai-store-backend.railway.app/api
 
 **ملخص:** `FRONTEND_URL` هو متغير بيئة في **Backend (Railway)** يحتوي على URL الـ Frontend على Vercel.
 
+

@@ -115,3 +115,4 @@ If you encounter any issues:
 3. Check RLS policies match your authentication setup
 4. Review the logs for detailed error information
 
+

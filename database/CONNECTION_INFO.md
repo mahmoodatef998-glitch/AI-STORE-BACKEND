@@ -28,3 +28,4 @@ https://nueufozblbymuvzlbywf.supabase.co
 - ✅ anon key آمن للاستخدام في Frontend
 - 🔒 احفظ هذه المعلومات بشكل آمن
 
+

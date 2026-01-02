@@ -29,3 +29,4 @@ ON CONFLICT (id) DO NOTHING;
 -- Note: Consumption logs and notifications will be created through the application
 -- User data should be managed through Supabase Auth
 
+

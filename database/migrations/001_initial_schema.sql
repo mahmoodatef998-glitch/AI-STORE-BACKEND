@@ -7,3 +7,4 @@
 
 -- Note: Execute schema.sql first, then run this migration for any additional setup
 
+

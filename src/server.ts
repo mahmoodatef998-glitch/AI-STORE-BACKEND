@@ -18,9 +18,46 @@ const PORT = Number(process.env.PORT) || 3001;
 
 // Middleware
 app.use(helmet());
+
+// CORS configuration - support both Production and Preview deployments
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://ai-store-frontend.vercel.app',
+];
+
+// Add FRONTEND_URL from environment if provided
+if (process.env.FRONTEND_URL) {
+  const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ''); // Remove trailing slash
+  if (!allowedOrigins.includes(frontendUrl)) {
+    allowedOrigins.push(frontendUrl);
+  }
+}
+
+// CORS with origin validation function
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check if origin is in allowed list
+    if (allowedOrigins.some(allowed => origin === allowed)) {
+      return callback(null, true);
+    }
+
+    // Allow Vercel Preview deployments (wildcard matching)
+    if (origin.includes('.vercel.app') || origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+
+    // Reject other origins
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(morgan('dev'));
 app.use(express.json());

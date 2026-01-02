@@ -23,3 +23,4 @@ router.get('/:id', getConsumptionById);
 
 export default router;
 
+

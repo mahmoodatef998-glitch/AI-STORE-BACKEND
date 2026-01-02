@@ -30,3 +30,4 @@ export const supabaseAnon = createClient(
   }
 );
 
+

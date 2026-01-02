@@ -18,3 +18,4 @@ router.put('/:id/sent', markNotificationAsSent);
 
 export default router;
 
+
