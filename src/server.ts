@@ -182,27 +182,28 @@ app.get('/health/detailed', async (_req, res) => {
 });
 
 // CORS debug endpoint (no auth required) - MUST be before API routes
+// This endpoint helps debug CORS issues by showing what origin the server receives
 app.get('/cors-debug', (req, res) => {
   const origin = req.headers.origin;
+  const normalizedOrigin = origin ? origin.trim().replace(/\/$/, '') : null;
+  const isVercel = origin ? (normalizedOrigin?.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) : false;
   
-  // Set CORS headers manually for this endpoint
-  if (origin) {
-    const normalizedOrigin = origin.trim().replace(/\/$/, '');
-    if (normalizedOrigin.startsWith('https://') && normalizedOrigin.endsWith('.vercel.app')) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
-  }
+  // Get the CORS header that was set by the middleware
+  const corsHeader = res.getHeader('Access-Control-Allow-Origin');
   
   res.json({
+    success: true,
     origin: origin || 'none',
-    normalizedOrigin: origin ? origin.replace(/\/$/, '') : null,
-    isVercel: origin ? (origin.includes('.vercel.app') || origin.endsWith('vercel.app')) : false,
+    normalizedOrigin: normalizedOrigin,
+    isVercel: isVercel || false,
     allowedOrigins: allowedOrigins,
     frontendUrl: process.env.FRONTEND_URL || 'not set',
-    corsHeader: res.getHeader('Access-Control-Allow-Origin') || 'not set',
+    corsHeader: corsHeader || 'not set',
+    requestHeaders: {
+      origin: req.headers.origin || 'none',
+      'user-agent': req.headers['user-agent'] || 'none',
+    },
     timestamp: new Date().toISOString(),
-    serverTime: new Date().toISOString(),
   });
 });
 
