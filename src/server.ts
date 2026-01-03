@@ -66,13 +66,14 @@ app.use((req, res, next) => {
   // Determine if origin should be allowed
   let isAllowed = false;
   let allowedOrigin: string | null = null;
+  let normalizedOrigin: string | null = null;
   
   if (!origin) {
     // Allow requests with no origin (mobile apps, curl, Postman, etc.)
     isAllowed = true;
   } else {
     // Normalize origin (remove trailing slash and whitespace)
-    const normalizedOrigin = origin.trim().replace(/\/$/, '');
+    normalizedOrigin = origin.trim().replace(/\/$/, '');
     
     // Allow localhost for development
     if (normalizedOrigin.startsWith('http://localhost:') || 
