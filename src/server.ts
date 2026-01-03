@@ -56,7 +56,16 @@ const allowedOrigins: string[] = [
   'http://localhost:3001',
 ];
 
-// Add production URL from environment if provided
+// Add CORS_ORIGIN from environment if provided (for compatibility with other projects)
+if (process.env.CORS_ORIGIN) {
+  const corsOrigin = process.env.CORS_ORIGIN.replace(/\/$/, ''); // Remove trailing slash
+  if (!allowedOrigins.includes(corsOrigin)) {
+    allowedOrigins.push(corsOrigin);
+    console.log(`[CORS] Added CORS_ORIGIN to allowed origins: ${corsOrigin}`);
+  }
+}
+
+// Add FRONTEND_URL from environment if provided
 if (process.env.FRONTEND_URL) {
   const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ''); // Remove trailing slash
   if (!allowedOrigins.includes(frontendUrl)) {
@@ -70,6 +79,9 @@ const productionUrl = 'https://ai-store-frontend.vercel.app';
 if (!allowedOrigins.includes(productionUrl)) {
   allowedOrigins.push(productionUrl);
 }
+
+// Log all allowed origins at startup
+console.log(`[CORS] Allowed origins: ${allowedOrigins.join(', ')}`);
 
 /**
  * PRODUCTION-READY CORS MIDDLEWARE
