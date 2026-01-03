@@ -22,18 +22,25 @@ app.get('/ping', (_req, res) => {
 });
 
 // CORS configuration - support both Production and Preview deployments
-const allowedOrigins = [
+// PRODUCTION-READY: Supports multiple origins via environment variable
+const allowedOrigins: string[] = [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://ai-store-frontend.vercel.app', // Production Vercel URL
 ];
 
-// Add FRONTEND_URL from environment if provided
+// Add production URL from environment if provided
 if (process.env.FRONTEND_URL) {
   const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ''); // Remove trailing slash
   if (!allowedOrigins.includes(frontendUrl)) {
     allowedOrigins.push(frontendUrl);
+    console.log(`[CORS] Added FRONTEND_URL to allowed origins: ${frontendUrl}`);
   }
+}
+
+// Always allow production Vercel URL (if not already added)
+const productionUrl = 'https://ai-store-frontend.vercel.app';
+if (!allowedOrigins.includes(productionUrl)) {
+  allowedOrigins.push(productionUrl);
 }
 
 /**
@@ -88,15 +95,18 @@ app.use((req, res, next) => {
     // Security: Only allow HTTPS and .vercel.app domains
     else if (normalizedOrigin.startsWith('https://') && 
              normalizedOrigin.endsWith('.vercel.app')) {
-      // Simple validation: Must be HTTPS and end with .vercel.app
-      // This is safe because:
-      // 1. We only allow Vercel's official domain
-      // 2. HTTPS is required
-      // 3. No wildcard subdomains allowed
-      isAllowed = true;
-      // CRITICAL: Use normalized origin (without trailing slash) to ensure exact match
-      allowedOrigin = normalizedOrigin;
-      console.log(`[CORS] ✅ Allowed Vercel origin: ${normalizedOrigin}`);
+      // Additional security: Validate Vercel domain format
+      // Pattern: https://[project-name][-hash][-user].vercel.app
+      const vercelDomainPattern = /^https:\/\/[a-zA-Z0-9][a-zA-Z0-9-]*\.vercel\.app$/;
+      
+      if (vercelDomainPattern.test(normalizedOrigin)) {
+        isAllowed = true;
+        // CRITICAL: Use normalized origin (without trailing slash) to ensure exact match
+        allowedOrigin = normalizedOrigin;
+        console.log(`[CORS] ✅ Allowed Vercel origin: ${normalizedOrigin}`);
+      } else {
+        console.warn(`[CORS] ⚠️ Invalid Vercel domain format: ${normalizedOrigin}`);
+      }
     }
   }
   
@@ -305,20 +315,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 API available at http://0.0.0.0:${PORT}/api`);
-  console.log(`🌐 CORS configured for Vercel deployments`);
-  console.log(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
-  console.log(`🔧 FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
+  console.log(`🌐 CORS Configuration:`);
+  console.log(`   - All Vercel *.vercel.app domains are allowed`);
+  console.log(`   - Explicit allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`   - FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
   console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
   console.log('='.repeat(50));
-  
-  // Verify route is registered
-  const routes = app._router?.stack?.filter((r: any) => r.route) || [];
-  const corsDebugRoute = routes.find((r: any) => r.route?.path === '/cors-debug');
-  if (corsDebugRoute) {
-    console.log('✅ /cors-debug route is registered');
-  } else {
-    console.error('❌ /cors-debug route is NOT registered!');
-  }
 });
 
 export default app;
