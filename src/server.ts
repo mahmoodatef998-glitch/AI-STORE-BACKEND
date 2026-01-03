@@ -60,10 +60,8 @@ if (!allowedOrigins.includes(productionUrl)) {
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Log for debugging (can be removed in production)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
-  }
+  // Always log CORS requests for debugging (especially important in production)
+  console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
   
   // Determine if origin should be allowed
   let isAllowed = false;
@@ -124,8 +122,8 @@ app.use((req, res, next) => {
       res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
       res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
       
-      // Log for debugging
-      console.log(`[CORS] ✅ Setting header for origin: ${cleanOrigin}`);
+      // Always log CORS headers being set (critical for production debugging)
+      console.log(`[CORS] ✅ Setting Access-Control-Allow-Origin: ${cleanOrigin} for ${req.method} ${req.path}`);
     }
     // If no origin (like curl, Postman), don't set CORS headers but allow the request
     
@@ -137,10 +135,10 @@ app.use((req, res, next) => {
     }
   } else if (origin) {
     // Reject blocked origins (but allow requests with no origin)
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
-      console.warn(`[CORS]    Allowed patterns: localhost, explicit origins, *.vercel.app`);
-    }
+    console.warn(`[CORS] ❌ Blocked origin: ${origin}`);
+    console.warn(`[CORS]    Normalized: ${normalizedOrigin}`);
+    console.warn(`[CORS]    Allowed patterns: localhost, explicit origins, *.vercel.app`);
+    console.warn(`[CORS]    Allowed origins: ${allowedOrigins.join(', ')}`);
     // Don't set CORS headers, browser will block
   }
   
