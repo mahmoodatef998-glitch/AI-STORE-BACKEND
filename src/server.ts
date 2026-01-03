@@ -229,6 +229,7 @@ app.get('/cors-debug', (req, res) => {
       isVercel: isVercel || false,
       allowedOrigins: allowedOrigins,
       frontendUrl: process.env.FRONTEND_URL || 'not set',
+      corsOrigin: process.env.CORS_ORIGIN || 'not set',
       corsHeader: corsHeader || 'not set',
       timestamp: new Date().toISOString(),
     });
@@ -271,6 +272,7 @@ app.get('/debug/cors', (req, res) => {
       isVercel: isVercel || false,
       allowedOrigins: allowedOrigins,
       frontendUrl: process.env.FRONTEND_URL || 'not set',
+      corsOrigin: process.env.CORS_ORIGIN || 'not set',
       corsHeader: corsHeader || 'not set',
       timestamp: new Date().toISOString(),
     });
@@ -301,6 +303,8 @@ app.get('/health/detailed', async (_req, res) => {
       PORT: process.env.PORT || '3001',
       NODE_ENV: process.env.NODE_ENV || 'not set',
       FRONTEND_URL: process.env.FRONTEND_URL || 'not set',
+      CORS_ORIGIN: process.env.CORS_ORIGIN || 'not set',
+      CORS_ORIGINS_COUNT: allowedOrigins.length,
     };
     
     res.json({
@@ -365,6 +369,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   - All Vercel *.vercel.app domains are allowed`);
   console.log(`   - Explicit allowed origins: ${allowedOrigins.join(', ')}`);
   console.log(`   - FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
+  console.log(`   - CORS_ORIGIN: ${process.env.CORS_ORIGIN || 'not set'}`);
+  console.log(`   - Total allowed origins: ${allowedOrigins.length}`);
   console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
   console.log(`✅ Test endpoints:`);
   console.log(`   - GET /ping`);
