@@ -94,10 +94,9 @@ app.use((req, res, next) => {
       // 2. HTTPS is required
       // 3. No wildcard subdomains allowed
       isAllowed = true;
-      allowedOrigin = origin;
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[CORS] ✅ Allowed Vercel origin: ${origin}`);
-      }
+      // CRITICAL: Use normalized origin (without trailing slash) to ensure exact match
+      allowedOrigin = normalizedOrigin;
+      console.log(`[CORS] ✅ Allowed Vercel origin: ${normalizedOrigin}`);
     }
   }
   
@@ -106,20 +105,23 @@ app.use((req, res, next) => {
     // If we have an allowed origin, set CORS headers
     if (allowedOrigin) {
       // CRITICAL: Set exact origin (required for credentials)
-      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      // Remove any trailing slash to ensure exact match
+      const cleanOrigin = allowedOrigin.trim().replace(/\/$/, '');
+      res.setHeader('Access-Control-Allow-Origin', cleanOrigin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
       res.setHeader('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
       res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+      
+      // Log for debugging
+      console.log(`[CORS] ✅ Setting header for origin: ${cleanOrigin}`);
     }
     // If no origin (like curl, Postman), don't set CORS headers but allow the request
     
     // Handle preflight requests (OPTIONS) - MUST return early
     if (req.method === 'OPTIONS') {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: ${allowedOrigin || 'none'}`);
-      }
+      console.log(`[CORS] ✅ Preflight (OPTIONS) - returning 204 for origin: ${allowedOrigin || 'none'}`);
       res.status(204).end();
       return; // CRITICAL: Don't call next() for OPTIONS
     }
