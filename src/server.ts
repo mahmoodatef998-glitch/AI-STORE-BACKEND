@@ -15,10 +15,30 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-// CRITICAL: Define routes BEFORE any middleware to ensure they work
-// This route MUST work if Express is working
+// ============================================
+// CRITICAL: Define routes FIRST - before ANY middleware
+// ============================================
+// These routes MUST work if Express is working
+// They are defined FIRST to ensure they're registered before middleware
+
 app.get('/ping', (_req, res) => {
-  res.json({ success: true, message: 'Ping works - Express is working' });
+  console.log('[PING] ✅ Route handler called!');
+  res.json({ success: true, message: 'Ping works - Express is working', timestamp: new Date().toISOString() });
+});
+
+// Root route for testing
+app.get('/', (_req, res) => {
+  console.log('[ROOT] ✅ Route handler called!');
+  res.json({ 
+    success: true, 
+    message: 'Backend API is running',
+    endpoints: {
+      ping: '/ping',
+      health: '/health',
+      corsDebug: '/cors-debug'
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
 // CORS configuration - support both Production and Preview deployments
@@ -61,7 +81,8 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   
   // Always log CORS requests for debugging (especially important in production)
-  console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'}`);
+  // CRITICAL: Log BEFORE processing to see all requests
+  console.log(`[CORS] ${req.method} ${req.path} | Origin: ${origin || 'none'} | Time: ${new Date().toISOString()}`);
   
   // Determine if origin should be allowed
   let isAllowed = false;
@@ -163,9 +184,11 @@ app.use(express.urlencoded({ extended: true }));
 // PUBLIC ROUTES (NO AUTH REQUIRED)
 // ============================================
 // IMPORTANT: These routes MUST be defined BEFORE API routes
+// NOTE: /ping and / are already defined above (before CORS middleware)
 
 // Health check
 app.get('/health', (_req, res) => {
+  console.log('[HEALTH] ✅ Route handler called!');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -201,13 +224,13 @@ app.get('/cors-debug', (req, res) => {
 
 // Simple test - MUST work if /health works
 app.get('/test-simple', (_req, res) => {
+  console.log('[TEST-SIMPLE] ✅ Route handler called!');
   res.json({ success: true, message: 'Simple test works' });
 });
 
-
-
 // Simple test route to verify route registration
 app.get('/test', (_req, res) => {
+  console.log('[TEST] ✅ Route handler called!');
   res.json({ success: true, message: 'Test route works', timestamp: new Date().toISOString() });
 });
 
@@ -239,7 +262,6 @@ app.get('/debug/cors', (req, res) => {
     });
   }
 });
-
 
 // Database and environment check endpoint (no auth required)
 app.get('/health/detailed', async (_req, res) => {
@@ -280,7 +302,6 @@ app.get('/health/detailed', async (_req, res) => {
   }
 });
 
-
 // API Routes (all require authentication via router-level middleware)
 // Serve uploaded files (static, no auth)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -299,16 +320,21 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Log all registered routes for debugging
-console.log('📋 Registered routes:');
-console.log('  GET /ping');
-console.log('  GET /health');
-console.log('  GET /cors-debug');
-console.log('  GET /health/detailed');
-console.log('  GET /api/equipments');
-console.log('  GET /api/consumption');
-console.log('  GET /api/notifications');
-console.log('  GET /api/predictions');
-console.log('  GET /api/orders');
+// CRITICAL: This runs at server startup, not at request time
+console.log('📋 Registered routes (in order):');
+console.log('  1. GET / (root)');
+console.log('  2. GET /ping');
+console.log('  3. GET /health');
+console.log('  4. GET /cors-debug');
+console.log('  5. GET /test-simple');
+console.log('  6. GET /test');
+console.log('  7. GET /debug/cors');
+console.log('  8. GET /health/detailed');
+console.log('  9. GET /api/equipments');
+console.log(' 10. GET /api/consumption');
+console.log(' 11. GET /api/notifications');
+console.log(' 12. GET /api/predictions');
+console.log(' 13. GET /api/orders');
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
@@ -320,6 +346,10 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   - Explicit allowed origins: ${allowedOrigins.join(', ')}`);
   console.log(`   - FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
   console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
+  console.log(`✅ Test endpoints:`);
+  console.log(`   - GET /ping`);
+  console.log(`   - GET /health`);
+  console.log(`   - GET /`);
   console.log('='.repeat(50));
 });
 
