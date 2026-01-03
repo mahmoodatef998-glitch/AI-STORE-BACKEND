@@ -360,23 +360,38 @@ console.log(' 11. GET /api/notifications');
 console.log(' 12. GET /api/predictions');
 console.log(' 13. GET /api/orders');
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('='.repeat(50));
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 API available at http://0.0.0.0:${PORT}/api`);
-  console.log(`🌐 CORS Configuration:`);
-  console.log(`   - All Vercel *.vercel.app domains are allowed`);
-  console.log(`   - Explicit allowed origins: ${allowedOrigins.join(', ')}`);
-  console.log(`   - FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
-  console.log(`   - CORS_ORIGIN: ${process.env.CORS_ORIGIN || 'not set'}`);
-  console.log(`   - Total allowed origins: ${allowedOrigins.length}`);
-  console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
-  console.log(`✅ Test endpoints:`);
-  console.log(`   - GET /ping`);
-  console.log(`   - GET /health`);
-  console.log(`   - GET /`);
-  console.log('='.repeat(50));
-});
+// Start server with error handling
+// CRITICAL: This is the entry point - must work on Railway
+try {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('='.repeat(50));
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 API available at http://0.0.0.0:${PORT}/api`);
+    console.log(`🌐 CORS Configuration:`);
+    console.log(`   - All Vercel *.vercel.app domains are allowed`);
+    console.log(`   - Explicit allowed origins: ${allowedOrigins.join(', ')}`);
+    console.log(`   - FRONTEND_URL: ${process.env.FRONTEND_URL || 'not set'}`);
+    console.log(`   - CORS_ORIGIN: ${process.env.CORS_ORIGIN || 'not set'}`);
+    console.log(`   - Total allowed origins: ${allowedOrigins.length}`);
+    console.log(`🔍 CORS Debug endpoint: http://0.0.0.0:${PORT}/cors-debug`);
+    console.log(`✅ Test endpoints:`);
+    console.log(`   - GET /ping`);
+    console.log(`   - GET /health`);
+    console.log(`   - GET /`);
+    console.log('='.repeat(50));
+  }).on('error', (err: NodeJS.ErrnoException) => {
+    console.error('❌ Server startup error:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      process.exit(1);
+    } else {
+      console.error('❌ Unknown server error:', err.message);
+      process.exit(1);
+    }
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
 
 export default app;
