@@ -13,7 +13,14 @@ import ordersRouter from './routes/orders';
 dotenv.config();
 
 const app = express();
+
+// CRITICAL: PORT validation - Railway provides PORT automatically
 const PORT = Number(process.env.PORT) || 3001;
+if (!PORT || isNaN(PORT) || PORT < 1 || PORT > 65535) {
+  console.error('❌ Invalid PORT:', process.env.PORT);
+  process.exit(1);
+}
+console.log(`[SERVER] Starting on port ${PORT} (from env: ${process.env.PORT || 'default'})`);
 
 // ============================================
 // CRITICAL: Define routes FIRST - before ANY middleware
