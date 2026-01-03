@@ -300,6 +300,7 @@ app.use(errorHandler);
 
 // Log all registered routes for debugging
 console.log('📋 Registered routes:');
+console.log('  GET /ping');
 console.log('  GET /health');
 console.log('  GET /cors-debug');
 console.log('  GET /health/detailed');
