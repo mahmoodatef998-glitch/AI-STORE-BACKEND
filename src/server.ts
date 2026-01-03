@@ -21,12 +21,10 @@ const PORT = Number(process.env.PORT) || 3001;
 // These routes MUST work if Express is working
 // They are defined FIRST to ensure they're registered before middleware
 
-app.get('/ping', (_req, res) => {
-  console.log('[PING] ✅ Route handler called!');
-  res.json({ success: true, message: 'Ping works - Express is working', timestamp: new Date().toISOString() });
-});
+// IMPORTANT: Register routes immediately after app creation
+// This ensures they're registered before any middleware
 
-// Root route for testing
+// Root route for testing - MUST be first
 app.get('/', (_req, res) => {
   console.log('[ROOT] ✅ Route handler called!');
   res.json({ 
@@ -40,6 +38,16 @@ app.get('/', (_req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Ping route - MUST work if Express is working
+app.get('/ping', (_req, res) => {
+  console.log('[PING] ✅ Route handler called!');
+  res.json({ success: true, message: 'Ping works - Express is working', timestamp: new Date().toISOString() });
+});
+
+// Log route registration immediately
+console.log('[ROUTES] ✅ Registered / route');
+console.log('[ROUTES] ✅ Registered /ping route');
 
 // CORS configuration - support both Production and Preview deployments
 // PRODUCTION-READY: Supports multiple origins via environment variable
